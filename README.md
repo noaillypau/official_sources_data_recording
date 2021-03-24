@@ -23,7 +23,7 @@ dataManager = DataManager(DataManager.Crypto)
 Create a dataset and extract data frame
 ```python
 dataset = dataManager.BYBIT_PREMIUM_OHLC_BTCUSD_1min
-df = dataManager.get_df(dataManager.VANTAGEFX_PRICE_EURUSD_1min, 
+df = dataManager.get_df(dataset, 
                         start_year=2005,
                         start_month=5,
                         end_year=2008,
