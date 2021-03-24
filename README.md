@@ -20,7 +20,7 @@ from dataManager import DataManager
 dataManager = DataManager(DataManager.Crypto)
 ```
 
-Create a dataset and extract data frame
+Create a dataset and extract dataframe
 ```python
 dataset = dataManager.BYBIT_PREMIUM_OHLC_BTCUSD_1min
 df = dataManager.get_df(dataset, 
