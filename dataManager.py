@@ -82,14 +82,71 @@ class DataManager():
 
 
 
-class Dataset():
+class Dataset(object):
+    """docstring for Dataset"""
     def __init__(self,mod,  broker, instrument, symbol, timeframe):
+        #super(Dataset, self).__init__()    
         self.field = mod
         self.broker = broker
         self.instrument = instrument
         self.symbol = symbol
         self.timeframe = timeframe
+        self.path = f'D://Trading/Data/{self.field}/{self.broker}/{self.instrument}/{self.symbol}/{self.timeframe}/'
+        with open('D://Trading/Data/infos.json', 'r') as f:
+            dic_infos = json.load(f)
+            f.close()
+        self.resampling_dict = dic_infos[mod][broker][instrument][timeframe]['resampling_dict']
+        self.infos = dic_infos[mod][broker][instrument][timeframe]['infos'][symbol]
+        
 
     def __repr__(self):
-        return f'Dataset of {self.field}:\n  Broker: {self.broker}\n  Instrument: {self.instrument}\n  Symbol: {self.symbol}\n  timeframe: {self.timeframe}\n  Path: D://Trading/Data/{self.field}/{self.broker}/{self.instrument}/{self.symbol}/{self.timeframe}'
+        return f'Dataset of {self.field}:\n  Broker: {self.broker}\n  Instrument: {self.instrument}\n  Symbol: {self.symbol}\n  timeframe: {self.timeframe}\n  Path: {self.path}'
+
+
+    def get_df(self, start_year, start_month, end_year, end_month, add_date=True):
+        folder = self.path
+
+        def concat_successive(df1,df2):
+            if len(df1) == 0:
+                return df2
+            elif len(df2) == 0:
+                return df1
+            else:
+                end_time = df1.iloc[-1].time
+                start_time = df2.iloc[0].time
+                if end_time == start_time:
+                    return pd.concat([df1.iloc[:-1],df2],axis=0).reset_index(drop=True)
+                else:
+                    return pd.concat([df1,df2],axis=0).reset_index(drop=True)
+
+        def date_to_ymd_str(date):
+            # return list of yyy, mm, dd as string (2 digit)
+            return str(date).split(' ')[0].split('-')
+
+        def date_next_month(date):
+            year, month = date.year, date.month
+            next_month = month % 12 + 1
+            next_year = year + month // 12
+            return datetime.datetime(next_year, next_month, date.day)
+
+        df = pd.DataFrame()
+        date = datetime.datetime(start_year, start_month, 1)
+        end_date = datetime.datetime(end_year, end_month, 1)
+
+        while date <= end_date:
+            year_str = date_to_ymd_str(date)[0]
+            month_str = date_to_ymd_str(date)[1]
+            if year_str in os.listdir(folder):
+                if f'{year_str}-{month_str}.csv.gz' in os.listdir(folder+year_str):
+                    df = concat_successive(df,pd.read_csv(folder+f'{year_str}/{year_str}-{month_str}.csv.gz'))
+            date = date_next_month(date)
+
+        if self.timeframe != '1min':
+            df.loc[:,'date'] = pd.to_datetime(df.time, unit='s')
+            df = df.set_index('date').resample(self.timeframe).agg(self.resampling_dict).reset_index(drop=True)
+
+        if add_date:
+            df.loc[:,'date'] = pd.to_datetime(df.time, unit='s')
+
+        return df
 
